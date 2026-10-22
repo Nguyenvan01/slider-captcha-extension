@@ -17,7 +17,6 @@
   // không nhớ vĩnh viễn: trang có thể dùng lại ảnh cũ hoặc cùng một URL ảnh => tự động sẽ im lặng dừng hẳn
   const HANDLED_TTL = 30000;
   const FETCH_TIMEOUT = 10000;         // tải ảnh treo thì cờ busy kẹt mãi
-  const dbg = (...a) => cfg.debug && console.log('[SCX]', ...a);
   const log = (...a) => console.log('%c[SCX]', 'color:#2563eb;font-weight:bold', ...a);   // luôn bật, xem trong DevTools > Console
 
   async function loadConfig() {
@@ -370,7 +369,7 @@
     }
   }
 
-  async function run(c, manual = false) {
+  async function run(c) {
     if (busy) return { ok: false, error: 'đang giải' };
     busy = true;
     const results = [];
@@ -386,8 +385,7 @@
         }
         res.try = i + 1; res.profile = c.profile.name; res.host = location.host; res.time = Date.now();
         results.push(res);
-        send({ type: 'log', entry: res });
-        dbg('kết quả', res);
+        log(`lần ${res.try}:`, res);
         if (res.status === 'success' || res.status === 'unknown' || res.status === 'error' || res.status === 'ignored') break;
         if (res.mode === 'dom' && res.finalErr != null && Math.abs(res.finalErr) < 2 && ++domRejected >= 2 && cfg.dragMode === 'auto') preferCdp = true;
         // thất bại: chờ captcha tự làm mới, nếu không thì bấm nút làm mới
@@ -406,7 +404,7 @@
     } finally { busy = false; }
     const last = results[results.length - 1] || {};
     const ok = last.status === 'success';
-    if (manual || cfg.debug || !ok) {
+    if (cfg.debug || !ok) {
       toast(ok ? `Đã giải captcha (${results.length} lần thử)` :
         `Chưa giải được captcha: ${last.status}${last.error ? ' – ' + last.error : ''}`, ok);
     }
@@ -437,26 +435,9 @@
     }, 300);
   }
 
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg && msg.type === 'scxPing') {
-      if (!findCaptcha()) return false;
-      sendResponse({ ok: true, found: true, host: location.host }); return false;
-    }
-    if (msg && msg.type === 'scxSolveNow') {
-      const c = findCaptcha();
-      if (!c) return false;                       // để frame khác (nếu có captcha) trả lời
-      run(c, true).then(sendResponse, (e) => sendResponse({ ok: false, error: e.message }));
-      return true;
-    }
-    return false;
-  });
-
   loadConfig().then(() => {
     new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'src'] });
     setInterval(() => { if (cfg.enabled && !busy) schedule(); }, 1500);   // canvas vẽ lại không sinh mutation
     schedule();
   });
-
-  // dùng cho kiểm thử
-  globalThis.__scx = { findCaptcha, run, capture, get cfg() { return cfg; } };
 })();

@@ -1,5 +1,4 @@
 const $ = (id) => document.getElementById(id);
-const FILES = ['config.js', 'solver/core.js', 'drag/track.js', 'drag/drivers.js', 'content.js'];
 
 let tab, pattern;
 
@@ -48,6 +47,7 @@ async function toggleSite() {
 }
 
 async function inject() {
+  const { files: FILES } = await chrome.runtime.sendMessage({ type: 'files' });
   try { await chrome.scripting.executeScript({ target: { tabId: tab.id, allFrames: true }, files: FILES }); }
   catch (e) { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: FILES }); }
 }

@@ -1,12 +1,11 @@
 /*
  * Service worker: đăng ký content script theo danh sách trang người dùng cho phép,
- * lưu log, đổi badge, tải ảnh khác origin, và phát sự kiện chuột qua chrome.debugger (chế độ CDP).
+ * đổi badge, tải ảnh khác origin, và phát sự kiện chuột qua chrome.debugger (chế độ CDP).
  */
 importScripts('config.js');
 
 const CS_ID = 'scx-auto';
 const CS_FILES = ['config.js', 'solver/core.js', 'drag/track.js', 'drag/drivers.js', 'content.js'];
-const MAX_LOGS = 200;
 
 async function getConfig() {
   const s = await chrome.storage.sync.get(null);
@@ -36,12 +35,6 @@ chrome.storage.onChanged.addListener((ch, area) => { if (area === 'sync' && ch.h
 chrome.permissions.onAdded.addListener(syncContentScripts);
 chrome.permissions.onRemoved.addListener(syncContentScripts);
 
-async function appendLog(entry, tab) {
-  const { logs = [] } = await chrome.storage.local.get('logs');
-  logs.unshift(Object.assign({ url: tab && tab.url ? new URL(tab.url).host : '' }, entry));
-  await chrome.storage.local.set({ logs: logs.slice(0, MAX_LOGS) });
-}
-
 function toBase64(buf) {
   let s = ''; const b = new Uint8Array(buf);
   for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
@@ -70,7 +63,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const tab = sender.tab;
   (async () => {
     switch (msg && msg.type) {
-      case 'log': await appendLog(msg.entry, tab); return { ok: true };
       case 'badge':
         if (tab) {
           await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: msg.ok ? '#15803d' : '#b91c1c' });

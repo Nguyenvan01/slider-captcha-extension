@@ -11,9 +11,6 @@
  *                  (bắt được cả lỗ đặc màu, nơi NCC không dùng được).
  *   - Chuẩn hoá z-score theo median/MAD rồi cộng lại, chọn điểm cao nhất.
  *
- * Kèm bản port của ddddocr (MIT, © sml2h3): slideMatch (Canny + TM_CCOEFF_NORMED)
- * và slideComparison (absdiff + contour lớn nhất) để dự phòng / đối chiếu.
- *
  * Chạy được cả trong trình duyệt (globalThis.SliderSolver) lẫn Node (module.exports).
  */
 (function (root, factory) {
@@ -226,7 +223,7 @@
     };
   }
 
-  // ---------- port ddddocr: slide_match (Canny + TM_CCOEFF_NORMED) ----------
+  // ---------- lọc Gauss + Canny (dùng cho khớp viền) ----------
 
   function gaussian5(g, W, H) {
     const k = [1, 4, 6, 4, 1], tmp = new Float32Array(W * H), out = new Float32Array(W * H);
@@ -270,78 +267,5 @@
     return out;
   }
 
-  /** TM_CCOEFF_NORMED của template T (tw x th) trên ảnh I (W x H) */
-  function matchTemplate(I, W, H, T, tw, th, xRange, yRange) {
-    const n = tw * th; let tm = 0; for (let i = 0; i < n; i++) tm += T[i]; tm /= n;
-    const Tz = new Float32Array(n); let tss = 0;
-    for (let i = 0; i < n; i++) { Tz[i] = T[i] - tm; tss += Tz[i] * Tz[i]; }
-    let best = { x: 0, y: 0, v: -Infinity };
-    const [x0, x1] = xRange || [0, W - tw], [y0, y1] = yRange || [0, H - th];
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      let s = 0;
-      for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) s += I[(y + j) * W + x + i];
-      const im = s / n; let num = 0, iss = 0;
-      for (let j = 0, q = 0; j < th; j++) for (let i = 0; i < tw; i++, q++) {
-        const v = I[(y + j) * W + x + i] - im; num += v * Tz[q]; iss += v * v;
-      }
-      const v = num / (Math.sqrt(iss * tss) + 1e-9);
-      if (v > best.v) best = { x, y, v };
-    }
-    return best;
-  }
-
-  /**
-   * Port slide_match của ddddocr. Mảnh ghép được cắt theo bbox alpha (phần trong suốt thành đen,
-   * giống khi ddddocr đọc PNG sang RGB). Trả về góc trái-trên (x,y) trên ảnh nền.
-   * restrictY: chỉ dò quanh hàng y của mảnh ghép (nhanh và chính xác hơn bản gốc).
-   */
-  function slideMatch(bg, piece, pieceOffset = { x: 0, y: 0 }, { simpleTarget = false, restrictY = true, ySearch = 2 } = {}) {
-    const am = alphaMask(piece);
-    const tw = am.w, th = am.h, crop = new Float32Array(tw * th);
-    const pg = toGray(piece);
-    for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) {
-      const i = (y + am.minY) * piece.width + x + am.minX;
-      crop[y * tw + x] = piece.data[i * 4 + 3] >= 128 ? pg[i] : 0;
-    }
-    let bgG = toGray(bg), tG = crop;
-    if (!simpleTarget) {
-      bgG = canny(gaussian5(bgG, bg.width, bg.height), bg.width, bg.height);
-      tG = canny(gaussian5(crop, tw, th), tw, th);
-    }
-    const cy = Math.round(pieceOffset.y + am.minY);
-    const yr = restrictY ? [Math.max(0, cy - ySearch), Math.min(bg.height - th, cy + ySearch)] : null;
-    const r = matchTemplate(bgG, bg.width, bg.height, tG, tw, th, null, yr);
-    const curX = Math.round(pieceOffset.x + am.minX);
-    return { method: simpleTarget ? 'slideMatchSimple' : 'slideMatch', x: r.x, y: r.y, currentX: curX, dx: r.x - curX, confidence: +r.v.toFixed(3) };
-  }
-
-  /** Port slide_comparison của ddddocr: so ảnh có lỗ với ảnh gốc, trả bbox vùng khác lớn nhất */
-  function slideComparison(withHole, original, threshold = 30) {
-    const W = withHole.width, H = withHole.height, a = withHole.data, b = original.data;
-    const bin = new Uint8Array(W * H);
-    for (let i = 0; i < W * H; i++) {
-      const d = 0.299 * Math.abs(a[i * 4] - b[i * 4]) + 0.587 * Math.abs(a[i * 4 + 1] - b[i * 4 + 1]) + 0.114 * Math.abs(a[i * 4 + 2] - b[i * 4 + 2]);
-      bin[i] = d > threshold ? 1 : 0;
-    }
-    // thành phần liên thông lớn nhất
-    const seen = new Uint8Array(W * H); let best = null;
-    for (let s = 0; s < W * H; s++) {
-      if (!bin[s] || seen[s]) continue;
-      const st = [s]; seen[s] = 1; let n = 0, x0 = W, y0 = H, x1 = 0, y1 = 0;
-      while (st.length) {
-        const i = st.pop(), x = i % W, y = (i / W) | 0; n++;
-        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-        for (const j of [i - 1, i + 1, i - W, i + W]) {
-          if (j < 0 || j >= W * H || seen[j] || !bin[j]) continue;
-          if ((j === i - 1 && x === 0) || (j === i + 1 && x === W - 1)) continue;
-          seen[j] = 1; st.push(j);
-        }
-      }
-      if (!best || n > best.n) best = { n, x0, y0, x1, y1 };
-    }
-    if (!best) return { method: 'slideComparison', x: 0, y: 0, w: 0, h: 0 };
-    return { method: 'slideComparison', x: best.x0, y: best.y0, w: best.x1 - best.x0 + 1, h: best.y1 - best.y0 + 1 };
-  }
-
-  return { solve, slideMatch, slideComparison, toGray, alphaMask, canny, DEFAULTS };
+  return { solve, toGray, alphaMask, canny, DEFAULTS };
 });
