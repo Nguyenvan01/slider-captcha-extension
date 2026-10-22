@@ -1,0 +1,24 @@
+:root {
+  --bg: #ffffff; --fg: #1f2933; --muted: #6b7785;
+  --primary: #f59e0b; --primary-hover: #d97706; --primary-fg: #1f1400;
+  --ok: #15803d; --ok-hover: #166534;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #17191c; --fg: #e6e8eb; --muted: #9aa4af; --ok: #16a34a; --ok-hover: #15803d; }
+}
+* { box-sizing: border-box; }
+body { width: 300px; margin: 0; padding: 14px 16px 16px; background: var(--bg); color: var(--fg); font: 13px/1.45 system-ui, "Segoe UI", Roboto, sans-serif; }
+
+.site { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; min-width: 0; }
+.host { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+button {
+  width: 100%; font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 8px; padding: 11px 12px;
+  background: var(--primary); color: var(--primary-fg);
+}
+button:not(:disabled):hover { background: var(--primary-hover); }
+body.on button { background: var(--ok); color: #fff; }
+body.on button:not(:disabled):hover { background: var(--ok-hover); }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }

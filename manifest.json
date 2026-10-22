@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Slider Captcha Helper",
+  "short_name": "SCX",
+  "version": "1.0.0",
+  "description": "Tự giải captcha kéo mảnh ghép trên các trang bạn cho phép. Thuật toán chạy cục bộ, không gửi ảnh đi đâu.",
+  "minimum_chrome_version": "116",
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": {
+    "default_title": "Slider Captcha Helper",
+    "default_popup": "popup/popup.html",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  },
+  "options_page": "options/options.html",
+  "background": { "service_worker": "background.js" },
+  "permissions": ["storage", "scripting", "activeTab", "debugger"],
+  "optional_host_permissions": ["*://*/*"]
+}

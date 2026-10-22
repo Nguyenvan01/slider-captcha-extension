@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../ui.css">
+<title>Tuỳ chọn – Slider Captcha Helper</title>
+</head>
+<body class="options">
+  <h1>Slider Captcha Helper</h1>
+  <p class="muted">Chỉ dùng trên hệ thống bạn có quyền tự động hoá. Ảnh captcha được xử lý ngay trong trình duyệt.</p>
+
+  <h2>Trang được phép</h2>
+  <label class="field" for="hosts">Match pattern, mỗi dòng một trang</label>
+  <p class="hint">Ví dụ: <code>https://*.example.gov.vn/*</code>. Có thể bật nhanh từng trang bằng nút trong popup.</p>
+  <textarea id="hosts" rows="5" spellcheck="false"></textarea>
+
+  <h2>Cách kéo</h2>
+  <label class="field" for="dragMode">Chế độ phát sự kiện chuột</label>
+  <select id="dragMode">
+    <option value="auto">Tự động (thử DOM, bị bỏ qua thì dùng CDP)</option>
+    <option value="dom">DOM – không cần quyền thêm</option>
+    <option value="cdp">CDP – sự kiện thật, cần quyền debugger</option>
+  </select>
+  <p class="hint">CDP cần quyền "debugger"; Chrome sẽ hiện thanh thông báo trong lúc kéo (~1 giây).</p>
+  <div class="check"><input type="checkbox" id="enabled"><label for="enabled">Tự giải khi captcha xuất hiện</label></div>
+  <div class="check"><input type="checkbox" id="autoDetect"><label for="autoDetect">Tự dò cấu trúc captcha nếu không khớp cấu hình nào</label></div>
+  <div class="check"><input type="checkbox" id="debug"><label for="debug">Chế độ gỡ lỗi (khung đỏ tại vị trí lỗ, log ra console)</label></div>
+  <label class="field" for="maxRetry">Số lần thử lại tối đa</label>
+  <input type="number" id="maxRetry" min="0" max="10">
+
+  <h2>Cấu hình captcha (nâng cao)</h2>
+  <p class="hint">Danh sách JSON các profile: <code>container</code>, <code>background</code>, <code>piece</code>, <code>handle</code>,
+    <code>refresh</code>, <code>success</code>, <code>fail</code> là CSS selector; <code>ratio</code> = px mảnh ghép / px chuột (0 = tự đo).</p>
+  <textarea id="profiles" rows="16" spellcheck="false"></textarea>
+
+  <div class="actions">
+    <button id="save">Lưu</button>
+    <button id="reset" class="secondary">Khôi phục mặc định</button>
+    <span id="status" class="muted"></span>
+  </div>
+<script src="../config.js"></script>
+<script src="options.js"></script>
+</body>
+</html>
