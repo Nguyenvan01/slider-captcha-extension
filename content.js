@@ -419,7 +419,8 @@
   const skip = (why) => { if (why !== lastSkip) { lastSkip = why; if (why) log('tự động bỏ qua:', why); } };
   function schedule() {
     if (scheduled) return; scheduled = true;
-    setTimeout(async () => {
+    (async () => {
+      await sleep(300);
       scheduled = false;
       if (!cfg.enabled) return skip('tiện ích đang tắt');
       if (busy) return skip('đang giải');
@@ -432,12 +433,13 @@
       handled.set(fp, now);
       try { await run(c); } catch (e) { console.error('[SCX] tự động lỗi', e); }
       const fp2 = c.bg.isConnected ? fingerprint(c.bg) : null; if (fp2) handled.set(fp2, Date.now());
-    }, 300);
+    })();
   }
 
   loadConfig().then(() => {
     new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'src'] });
-    setInterval(() => { if (cfg.enabled && !busy) schedule(); }, 1500);   // canvas vẽ lại không sinh mutation
+    // canvas vẽ lại không sinh mutation; dùng sleep (không dùng setInterval) để vẫn chạy khi cửa sổ bị thu nhỏ/che
+    (async () => { for (;;) { await sleep(1500); if (cfg.enabled && !busy) schedule(); } })();
     schedule();
   });
 })();

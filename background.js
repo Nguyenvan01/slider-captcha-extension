@@ -81,6 +81,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (!tab) throw new Error('không rõ tab');
         await cdp(tab.id, msg.action, msg.x, msg.y);
         return { ok: true };
+      case 'sleep': await new Promise((r) => setTimeout(r, Math.min(+msg.ms || 0, 60000))); return { ok: true };
       case 'syncScripts': return { ok: true, allowed: await syncContentScripts() };
       case 'files': return { ok: true, files: CS_FILES };
       default: return null;

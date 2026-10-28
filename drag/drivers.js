@@ -6,7 +6,12 @@
  * Cả hai nhận toạ độ client (viewport của frame hiện tại).
  */
 (function (root) {
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Cửa sổ thu nhỏ/bị che => trang "ẩn", Chrome bóp setTimeout xuống ≥1s (ẩn lâu: ~1 lần/phút).
+  // Lúc đó nhờ service worker đếm giờ (không bị bóp); trang hiện bình thường thì dùng setTimeout.
+  const timeout = (ms) => new Promise((r) => setTimeout(r, ms));
+  const sleep = (ms) => (document.hidden
+    ? chrome.runtime.sendMessage({ type: 'sleep', ms }).catch(() => timeout(ms))
+    : timeout(ms));
 
   class DomDriver {
     constructor(handle, { touch = 'auto' } = {}) {
